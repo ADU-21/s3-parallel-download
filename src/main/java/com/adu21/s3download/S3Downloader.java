@@ -3,6 +3,7 @@ package com.adu21.s3download;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -20,7 +21,6 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.GetObjectRequest;
-import javafx.util.Pair;
 import org.apache.commons.io.IOUtils;
 
 /**
@@ -31,7 +31,7 @@ public class S3Downloader {
     private static final int TIMEOUT_MILLIS = 60 * 60 * 1000;
     private static final int NUMBER_OF_PARTS = 5;
 
-    public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
         String bucketName = "duyidong-archive";
         String key = "data/175M_test_data.json";
         ExecutorService executorService = Executors.newFixedThreadPool(5);
@@ -41,7 +41,7 @@ public class S3Downloader {
         clientConfiguration.setSocketTimeout(TIMEOUT_MILLIS);
         clientConfiguration.setMaxConnections(500);
         clientConfiguration.setMaxErrorRetry(10);
-        clientConfiguration.setProtocol(Protocol.HTTPS);
+        clientConfiguration.setProtocol(Protocol.HTTP);
 
         AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
             .withRegion(Regions.US_EAST_1)
@@ -55,11 +55,13 @@ public class S3Downloader {
         final List<Future<Chunk>> futures = submitToThreadPool(executorService, s3Client, getPartRequests);
         final ArrayList<Chunk> chunks = getOrderedChunks(futures);
         final String finalStr = processHeadAndTail(chunks);
-        executorService.shutdownNow();
 
         long endTime = System.currentTimeMillis();
+
         System.out.println(finalStr.length());
         System.out.println("Run time: " + (endTime - startTime) + "ms");
+
+        executorService.shutdownNow();
     }
 
     private static String processHeadAndTail(ArrayList<Chunk> chunks) {
@@ -67,7 +69,7 @@ public class S3Downloader {
         chunks.forEach(chunk -> {
             stringBuilder.append(chunk.getHead());
         });
-
+        // Process rest data which are head and tail in the chunk here
         return stringBuilder.toString();
     }
 
@@ -101,7 +103,7 @@ public class S3Downloader {
             .getContentLength();
         long chunkSize = size / NUMBER_OF_PARTS;
         return IntStream.range(0, NUMBER_OF_PARTS)
-            .mapToObj(index -> new Pair<>(index * chunkSize,
+            .mapToObj(index -> new AbstractMap.SimpleEntry<>(index * chunkSize,
                 (index + 1) * chunkSize > size ? size - 1 : (index + 1) * chunkSize - 1))
             .map(range -> new GetObjectRequest(bucketName, key).withRange(range.getKey(), range.getValue()))
             .collect(Collectors.toList());
