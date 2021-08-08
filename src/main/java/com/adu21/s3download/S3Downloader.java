@@ -29,12 +29,12 @@ import org.apache.commons.io.IOUtils;
  */
 public class S3Downloader {
     private static final int TIMEOUT_MILLIS = 60 * 60 * 1000;
-    private static final int NUMBER_OF_PARTS = 5;
+    private static final int NUMBER_OF_PARTS = 20;
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
         String bucketName = "duyidong-archive";
         String key = "data/175M_test_data.json";
-        ExecutorService executorService = Executors.newFixedThreadPool(5);
+        ExecutorService executorService = Executors.newFixedThreadPool(20);
 
         ClientConfiguration clientConfiguration = new ClientConfiguration();
         clientConfiguration.setConnectionTimeout(TIMEOUT_MILLIS);
